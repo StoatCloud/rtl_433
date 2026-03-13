@@ -1,6 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import {
+  AMBIENT_WEATHER_PROTOCOLS
+} from "./discovery-service.js";
+import {
   getAppHomeDir,
   loadState,
   normalizeHexPayload,
@@ -84,6 +87,89 @@ function renderRtl433Template({ frequency, decoder, mqttUrl }) {
   ].join("\n");
 }
 
+function renderWeatherRtl433Template({ frequency, mqttUrl, protocols }) {
+  const lines = [
+    "# --- Purpose-built weather sensor template ---",
+    `frequency ${frequency}`,
+    "sample_rate 250k"
+  ];
+  for (const protocol of protocols) {
+    lines.push(`protocol ${protocol}`);
+  }
+  lines.push("output json");
+  lines.push(`output ${mqttUrl}`);
+  lines.push("report_meta time:utc");
+  return lines.join("\n");
+}
+
+function yamlEscapeSingleQuotes(value) {
+  return String(value).replaceAll("'", "''");
+}
+
+function hasMqttSensorHeader(lines) {
+  return lines.length > 2;
+}
+
+const UNIT_BY_FIELD = {
+  temperature_C: "°C",
+  temperature_F: "°F",
+  humidity: "%",
+  pressure_hPa: "hPa",
+  rain_mm: "mm",
+  rain_in: "in",
+  wind_avg_m_s: "m/s",
+  wind_max_m_s: "m/s",
+  wind_speed_m_s: "m/s",
+  wind_speed_km_h: "km/h",
+  wind_speed_mph: "mph",
+  uv: "UV",
+  lux: "lx"
+};
+
+const DEVICE_CLASS_BY_FIELD = {
+  temperature_C: "temperature",
+  temperature_F: "temperature",
+  humidity: "humidity",
+  pressure_hPa: "atmospheric_pressure",
+  rain_mm: "precipitation",
+  rain_in: "precipitation",
+  battery_ok: "battery"
+};
+
+function renderWeatherSensorYaml(adoptedEntries, mqttTopic) {
+  const lines = ["mqtt:", "  sensor:"];
+  for (const entry of adoptedEntries) {
+    for (const field of entry.fields) {
+      const metricSlug = slugify(field);
+      const uniqueId = `weather_${entry.entitySlug}_${metricSlug}`;
+      const fieldName = field.replaceAll("_", " ");
+      const valueTemplate =
+        `{{ value_json.${field} if value_json.model == '${yamlEscapeSingleQuotes(entry.model)}' ` +
+        `and value_json.id|string == '${yamlEscapeSingleQuotes(entry.id)}' ` +
+        `and value_json.channel|string == '${yamlEscapeSingleQuotes(entry.channel)}' else none }}`;
+
+      lines.push(`    - name: ${entry.name} ${fieldName}`);
+      lines.push(`      unique_id: ${uniqueId}`);
+      lines.push(`      state_topic: ${mqttTopic}`);
+      lines.push(`      value_template: "${valueTemplate}"`);
+      if (UNIT_BY_FIELD[field]) {
+        lines.push(`      unit_of_measurement: "${UNIT_BY_FIELD[field]}"`);
+      }
+      if (DEVICE_CLASS_BY_FIELD[field]) {
+        lines.push(`      device_class: ${DEVICE_CLASS_BY_FIELD[field]}`);
+      }
+      lines.push("      state_class: measurement");
+      lines.push("      qos: 0");
+      lines.push("      expire_after: 5400");
+    }
+  }
+
+  if (!hasMqttSensorHeader(lines)) {
+    return "mqtt:\n  sensor: []\n";
+  }
+  return `${lines.join("\n")}\n`;
+}
+
 export async function exportHomeAssistantBundle({
   frequency = 433_920_000,
   decoder,
@@ -120,5 +206,82 @@ export async function exportHomeAssistantBundle({
     automationPath,
     templatePath,
     adoptedCount: adoptedEntries.length
+  };
+}
+
+export async function adoptWeatherSensor({ sensorKey, name, fields = [] }) {
+  if (!sensorKey || !sensorKey.trim()) {
+    throw new Error("Sensor key is required.");
+  }
+
+  const state = await loadState();
+  const discoveredSensor = state.discoveredWeather[sensorKey];
+  if (!discoveredSensor) {
+    throw new Error(`Unknown weather sensor key: ${sensorKey}`);
+  }
+
+  const fallbackName = `${discoveredSensor.model}_${discoveredSensor.id}_${discoveredSensor.channel}`;
+  const resolvedName = (name && name.trim()) || fallbackName;
+  const entitySlug = slugify(resolvedName);
+  const selectedFields =
+    fields.length > 0
+      ? fields
+      : discoveredSensor.metricFields.filter((field) => field !== "battery_ok");
+
+  if (!selectedFields.length) {
+    throw new Error("No weather fields available to adopt for this sensor.");
+  }
+
+  state.adoptedWeather[sensorKey] = {
+    sensorKey,
+    model: discoveredSensor.model,
+    id: discoveredSensor.id,
+    channel: discoveredSensor.channel,
+    name: resolvedName,
+    entitySlug,
+    fields: [...new Set(selectedFields)].sort((a, b) => a.localeCompare(b)),
+    adoptedAt: new Date().toISOString()
+  };
+
+  await saveState(state);
+  return state.adoptedWeather[sensorKey];
+}
+
+export async function exportHomeAssistantWeatherBundle({
+  frequency = 433_920_000,
+  mqttUrl = "mqtt://core-mosquitto:1883,user=iot,pass=REPLACE,retain=1",
+  mqttEventTopic = "rtl_433/events",
+  protocols = [...AMBIENT_WEATHER_PROTOCOLS]
+}) {
+  const state = await loadState();
+  const adoptedWeatherEntries = Object.values(state.adoptedWeather);
+  if (!adoptedWeatherEntries.length) {
+    throw new Error("No adopted weather sensors found. Adopt at least one weather sensor first.");
+  }
+
+  const appHome = getAppHomeDir();
+  await fs.mkdir(appHome, { recursive: true });
+
+  const weatherSensorsYaml = renderWeatherSensorYaml(adoptedWeatherEntries, mqttEventTopic);
+  const weatherTemplate = renderWeatherRtl433Template({
+    frequency,
+    mqttUrl,
+    protocols
+  });
+
+  const weatherSensorsPath = path.join(appHome, "ha_weather_mqtt_sensors.yaml");
+  const weatherTemplatePath = path.join(
+    appHome,
+    "rtl_433.weather.conf.template.generated"
+  );
+
+  await fs.writeFile(weatherSensorsPath, weatherSensorsYaml, "utf8");
+  await fs.writeFile(weatherTemplatePath, weatherTemplate, "utf8");
+
+  return {
+    weatherSensorsPath,
+    weatherTemplatePath,
+    adoptedCount: adoptedWeatherEntries.length,
+    protocolCount: protocols.length
   };
 }

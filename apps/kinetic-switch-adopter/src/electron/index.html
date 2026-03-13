@@ -77,7 +77,7 @@
   </head>
   <body>
     <h1>Kinetic Switch Adopter</h1>
-    <p>macOS-first Electron workflow for reliable switch discovery and Home Assistant adoption.</p>
+    <p>macOS-first Electron workflow for kinetic switch and weather RF onboarding into Home Assistant.</p>
 
     <div class="row" style="max-width: 650px;">
       <label for="binary-path">rtl_433 binary path</label>
@@ -122,6 +122,31 @@
       </section>
     </div>
 
+    <div class="grid" style="margin-top: 1rem;">
+      <section>
+        <h2>Weather Mode 1) Discover sensors</h2>
+        <div class="row"><label for="weather-frequency">Frequency (Hz)</label><input id="weather-frequency" value="433920000" /></div>
+        <div class="row"><label for="weather-duration">Duration (s)</label><input id="weather-duration" value="90" /></div>
+        <div class="row"><label for="weather-sample-rate">Sample rate</label><input id="weather-sample-rate" value="250000" /></div>
+        <div class="row"><label for="weather-protocols">Protocols (csv)</label><input id="weather-protocols" /></div>
+        <button id="run-weather-discovery">Run Weather Discovery</button>
+        <pre id="weather-discovery-output"></pre>
+      </section>
+
+      <section>
+        <h2>Weather Mode 2) Adopt sensor + export</h2>
+        <div class="row"><label for="weather-sensor-key">Sensor key</label><input id="weather-sensor-key" placeholder="AmbientWeather...::id::channel" /></div>
+        <div class="row"><label for="weather-name">Name</label><input id="weather-name" placeholder="backyard_weather" /></div>
+        <div class="row"><label for="weather-fields">Fields (csv, optional)</label><input id="weather-fields" placeholder="temperature_C,humidity,pressure_hPa" /></div>
+        <button id="adopt-weather">Adopt Weather Sensor</button>
+        <pre id="weather-adopt-output"></pre>
+        <div class="row"><label for="weather-mqtt-url">MQTT output URL</label><input id="weather-mqtt-url" value="mqtt://core-mosquitto:1883,user=iot,pass=REPLACE,retain=1" /></div>
+        <div class="row"><label for="weather-mqtt-topic">HA MQTT topic</label><input id="weather-mqtt-topic" value="rtl_433/events" /></div>
+        <button id="export-weather-ha">Export Weather Bundle</button>
+        <pre id="weather-export-output"></pre>
+      </section>
+    </div>
+
     <section style="margin-top: 1rem;">
       <h2>Discovered + adopted switches</h2>
       <table>
@@ -136,6 +161,24 @@
           </tr>
         </thead>
         <tbody id="discovered-table-body"></tbody>
+      </table>
+    </section>
+
+    <section style="margin-top: 1rem;">
+      <h2>Discovered + adopted weather sensors</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Sensor key</th>
+            <th>Model</th>
+            <th>ID</th>
+            <th>Channel</th>
+            <th>Frames</th>
+            <th>Fields</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="weather-table-body"></tbody>
       </table>
     </section>
 

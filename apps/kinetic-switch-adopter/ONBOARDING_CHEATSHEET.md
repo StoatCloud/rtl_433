@@ -113,3 +113,24 @@ npm run start:cli -- export-ha --frequency 433920000 --decoder "n=KineticSwitch,
 - **Too many ghost events:** tighten decoder (`bits>=`, `bits<=`, `unique`), reduce RF noise.
 - **App can’t call rtl_433:** set the binary path explicitly (`/opt/homebrew/bin/rtl_433` on Apple Silicon).
 - **HA sees nothing:** MQTT topic mismatch or broker auth typo. Yes, check the password again.
+
+---
+
+## Bonus: Ambient Weather sensor onboarding
+
+Because yes, this app now does weather mode too.
+
+In Electron:
+
+1. Use **Weather Mode 1) Discover sensors** and run discovery with protocol preset.
+2. Copy a discovered `sensor key` (`model::id::channel`) into **Weather Mode 2**.
+3. Adopt with a sane name and optional field list (`temperature_C,humidity,pressure_hPa`).
+4. Export weather bundle and merge `ha_weather_mqtt_sensors.yaml` into HA.
+
+CLI equivalent:
+
+```bash
+npm run start:cli -- discover-weather --frequency 433920000 --duration 90
+npm run start:cli -- adopt-weather --sensor-key "AmbientWeather-WH31E::42::1" --name backyard_weather --fields temperature_C,humidity,pressure_hPa
+npm run start:cli -- export-ha-weather --frequency 433920000
+```

@@ -2,12 +2,16 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { app, BrowserWindow, ipcMain } from "electron";
 import {
+  AMBIENT_WEATHER_PROTOCOLS,
   analyzeSignal,
+  discoverWeatherSensors,
   discoverSwitches,
   getPersistedState
 } from "../core/discovery-service.js";
 import {
+  adoptWeatherSensor,
   adoptSwitch,
+  exportHomeAssistantWeatherBundle,
   exportHomeAssistantBundle
 } from "../core/adoption-service.js";
 
@@ -27,10 +31,14 @@ function createWindow() {
 }
 
 ipcMain.handle("state:get", () => getPersistedState());
+ipcMain.handle("weather:ambient-protocols", () => [...AMBIENT_WEATHER_PROTOCOLS]);
 ipcMain.handle("analysis:run", (_, payload) => analyzeSignal(payload));
 ipcMain.handle("discovery:run", (_, payload) => discoverSwitches(payload));
+ipcMain.handle("discovery:run-weather", (_, payload) => discoverWeatherSensors(payload));
 ipcMain.handle("adoption:save", (_, payload) => adoptSwitch(payload));
+ipcMain.handle("adoption:save-weather", (_, payload) => adoptWeatherSensor(payload));
 ipcMain.handle("ha:export", (_, payload) => exportHomeAssistantBundle(payload));
+ipcMain.handle("ha:export-weather", (_, payload) => exportHomeAssistantWeatherBundle(payload));
 
 app.whenReady().then(() => {
   createWindow();

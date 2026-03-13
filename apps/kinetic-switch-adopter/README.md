@@ -1,6 +1,6 @@
 # Kinetic Switch Adopter
 
-Purpose-built local app for discovering unknown 433 MHz kinetic switches and adopting them into Home Assistant with repeatable, low-noise configuration.
+Purpose-built local app for discovering unknown 433 MHz kinetic switches and onboarding common weather RF sensors into Home Assistant with repeatable, low-noise configuration.
 
 ## Why this exists
 
@@ -18,7 +18,7 @@ It provides one shared workflow engine with two interfaces:
 
 Windows is supported by the same Node/Electron stack, prioritized after macOS and Linux.
 
-## Core workflow
+## Core workflow (Kinetic Switch mode)
 
 1. **Analyze signal** (`rtl_433 -R 0 -A`) to extract pulse/gap distributions and raw codes.
 2. **Recommend decoder** with strict bounds (`bits>=`, `bits<=`, `unique`) to reduce RF junk.
@@ -27,6 +27,14 @@ Windows is supported by the same Node/Electron stack, prioritized after macOS an
    - `rtl_433.conf.template` snippet
    - `input_boolean` helpers
    - MQTT-trigger automations filtered by payload data
+
+## Core workflow (Weather mode)
+
+1. **Discover weather sensors** with built-in protocol presets for Ambient Weather-class devices.
+2. **Adopt sensors** by stable identity (`model::id::channel`), select metric fields.
+3. **Export weather bundle**:
+   - `ha_weather_mqtt_sensors.yaml` for Home Assistant MQTT sensors
+   - `rtl_433.weather.conf.template.generated`
 
 All sessions and discovered/adopted devices are stored atomically at:
 
@@ -71,13 +79,32 @@ npm run start:cli -- adopt --payload e198 --name kitchen_toggle
 npm run start:cli -- export-ha --frequency 433920000 --mqtt-url "mqtt://core-mosquitto:1883,user=iot,pass=REPLACE,retain=1"
 ```
 
+### 5) Discover Ambient Weather-class sensors
+
+```bash
+npm run start:cli -- discover-weather --frequency 433920000 --duration 90
+```
+
+### 6) Adopt weather sensor
+
+```bash
+npm run start:cli -- adopt-weather --sensor-key "AmbientWeather-WH31E::88::1" --name backyard_weather --fields temperature_C,humidity,pressure_hPa
+```
+
+### 7) Export weather HA bundle
+
+```bash
+npm run start:cli -- export-ha-weather --frequency 433920000
+```
+
 ## Electron app
 
 ```bash
 npm run start:electron
 ```
 
-Use the UI tabs in order: Analyze -> Discover -> Adopt -> Export.
+Use the UI in order for switch mode: Analyze -> Discover -> Adopt -> Export.  
+Use Weather Mode sections for sensor onboarding.
 
 ## New here with a Mac mini and 10 switches?
 

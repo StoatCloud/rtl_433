@@ -12,7 +12,9 @@ function defaultState() {
     updatedAt: new Date().toISOString(),
     sessions: [],
     discovered: {},
-    adopted: {}
+    adopted: {},
+    discoveredWeather: {},
+    adoptedWeather: {}
   };
 }
 
