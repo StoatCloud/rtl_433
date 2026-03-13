@@ -78,3 +78,7 @@ npm run start:electron
 ```
 
 Use the UI tabs in order: Analyze -> Discover -> Adopt -> Export.
+
+## New here with a Mac mini and 10 switches?
+
+Read the snarky quickstart: `ONBOARDING_CHEATSHEET.md`.
