@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kinetic Switch Adopter</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 1rem;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+      h1, h2 {
+        margin: 0.3rem 0 0.8rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+        gap: 1rem;
+      }
+      section {
+        border: 1px solid #334155;
+        border-radius: 0.6rem;
+        padding: 0.9rem;
+        background: #111827;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 0.5rem;
+        align-items: center;
+        margin-bottom: 0.4rem;
+      }
+      input {
+        background: #1e293b;
+        color: #e2e8f0;
+        border: 1px solid #475569;
+        border-radius: 0.3rem;
+        padding: 0.4rem;
+      }
+      button {
+        background: #2563eb;
+        color: #fff;
+        border: 0;
+        border-radius: 0.4rem;
+        padding: 0.5rem 0.8rem;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      button:hover {
+        background: #1d4ed8;
+      }
+      pre {
+        background: #020617;
+        border: 1px solid #334155;
+        border-radius: 0.5rem;
+        padding: 0.7rem;
+        overflow: auto;
+        max-height: 240px;
+        margin-top: 0.8rem;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th, td {
+        border-bottom: 1px solid #334155;
+        padding: 0.45rem;
+        text-align: left;
+      }
+      code {
+        color: #93c5fd;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Kinetic Switch Adopter</h1>
+    <p>macOS-first Electron workflow for reliable switch discovery and Home Assistant adoption.</p>
+
+    <div class="row" style="max-width: 650px;">
+      <label for="binary-path">rtl_433 binary path</label>
+      <input id="binary-path" value="rtl_433" />
+    </div>
+
+    <div class="grid">
+      <section>
+        <h2>1) Analyze pulse timings</h2>
+        <div class="row"><label for="analysis-frequency">Frequency (Hz)</label><input id="analysis-frequency" value="433920000" /></div>
+        <div class="row"><label for="analysis-duration">Duration (s)</label><input id="analysis-duration" value="30" /></div>
+        <button id="run-analysis">Run Analysis</button>
+        <pre id="analysis-output"></pre>
+      </section>
+
+      <section>
+        <h2>2) Discover switch payloads</h2>
+        <div class="row"><label for="discovery-frequency">Frequency (Hz)</label><input id="discovery-frequency" value="433920000" /></div>
+        <div class="row"><label for="discovery-duration">Duration (s)</label><input id="discovery-duration" value="60" /></div>
+        <div class="row"><label for="discovery-sample-rate">Sample rate</label><input id="discovery-sample-rate" value="250000" /></div>
+        <div class="row"><label for="discovery-decoder">Decoder spec</label><input id="discovery-decoder" /></div>
+        <button id="run-discovery">Run Discovery</button>
+        <pre id="discovery-output"></pre>
+      </section>
+
+      <section>
+        <h2>3) Adopt switch</h2>
+        <div class="row"><label for="adopt-payload">Payload (hex)</label><input id="adopt-payload" placeholder="e198" /></div>
+        <div class="row"><label for="adopt-name">Name</label><input id="adopt-name" placeholder="kitchen_toggle" /></div>
+        <button id="adopt-switch">Adopt Payload</button>
+        <pre id="adopt-output"></pre>
+      </section>
+
+      <section>
+        <h2>4) Export Home Assistant bundle</h2>
+        <div class="row"><label for="export-frequency">Frequency (Hz)</label><input id="export-frequency" value="433920000" /></div>
+        <div class="row"><label for="export-decoder">Decoder spec</label><input id="export-decoder" /></div>
+        <div class="row"><label for="export-mqtt-url">MQTT output URL</label><input id="export-mqtt-url" value="mqtt://core-mosquitto:1883,user=iot,pass=REPLACE,retain=1" /></div>
+        <div class="row"><label for="export-mqtt-topic">HA MQTT topic</label><input id="export-mqtt-topic" value="rtl_433/events" /></div>
+        <button id="export-ha">Export Bundle</button>
+        <pre id="export-output"></pre>
+      </section>
+    </div>
+
+    <section style="margin-top: 1rem;">
+      <h2>Discovered + adopted switches</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Payload</th>
+            <th>Presses</th>
+            <th>Raw frames</th>
+            <th>Confidence</th>
+            <th>Bits</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="discovered-table-body"></tbody>
+      </table>
+    </section>
+
+    <section style="margin-top: 1rem;">
+      <h2>State snapshot</h2>
+      <pre id="state-json"></pre>
+    </section>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>
