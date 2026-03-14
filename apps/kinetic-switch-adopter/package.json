@@ -1,0 +1,16 @@
+{
+  "name": "kinetic-switch-adopter",
+  "version": "0.1.0",
+  "description": "Purpose-built kinetic switch discovery and Home Assistant adoption app",
+  "type": "module",
+  "main": "src/electron/main.js",
+  "scripts": {
+    "start:cli": "node src/cli.js",
+    "start:electron": "electron src/electron/main.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "commander": "^14.0.1",
+    "electron": "^38.1.2"
+  }
+}
